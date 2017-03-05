@@ -1,0 +1,38 @@
+﻿<Window x:Class="Pantas.DeltaDraw.Test2.MainWindow"
+		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:this="clr-namespace:Pantas.DeltaDraw.Test2"
+		xmlns:core="clr-namespace:Pantas.DeltaDraw.Core;assembly=DeltaDrawCore"		
+		Title="MainWindow" Height="350" Width="525">
+	<Window.Resources>
+		<!--<Style TargetType="{x:Type core:DDTSFrameHandle}">
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate>
+						<Grid>
+							<Rectangle RadiusX="2" RadiusY="2" Fill="Black" Width="10" Height="10"
+												Canvas.Left="2" Canvas.Top="2"/>
+							<Rectangle RadiusX="2" RadiusY="2" Stroke="Black"/>
+						</Grid>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>-->
+	</Window.Resources>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*" />
+			<RowDefinition Height="40" />
+		</Grid.RowDefinitions>
+		<ScrollViewer Name="xamlScrollViewer" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible" Foreground="Black" Margin="0,1,0,0" Grid.Row="0">
+			<!--<Canvas Name="xamlCanvas" Background="#FFCBFCFF" Width="1000" Height="1000" />-->
+		</ScrollViewer>
+		<StackPanel Grid.Row="2" Orientation="Horizontal">
+			<Button Name="xamlButton1" Click="xamlButton1_Click" Margin="10,5,0,5" Padding="5">Few polygons</Button>
+			<Button Name="xamlButton2" Click="xamlButton2_Click" Margin="5,5,0,5" Padding="5">Many random polygons</Button>
+			<Button Name="xamlButton3" Click="xamlButton3_Click" Margin="5,5,0,5" Padding="5">Resize</Button>
+			<Button Name="xamlButton4" Click="xamlButton4_Click" Margin="5,5,0,5" Padding="5">Manipulate</Button>
+			<Button Name="xamlButton5" Click="xamlButton5_Click" Margin="5,5,0,5" Padding="5">Transform</Button>
+		</StackPanel>
+	</Grid>
+</Window>

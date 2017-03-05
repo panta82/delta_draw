@@ -1,0 +1,660 @@
+﻿<Window x:Class="Pantas.DeltaDraw.Application.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:this="clr-namespace:Pantas.DeltaDraw.Application"
+		xmlns:core="clr-namespace:Pantas.DeltaDraw.Core;assembly=DeltaDrawCore"
+		xmlns:nud="clr-namespace:Pantas.DeltaDraw.NumericUpDown;assembly=NumericUpDown"
+		xmlns:bp="clr-namespace:Pantas.DeltaDraw.BrushPicker;assembly=BrushPicker"
+		xmlns:gss="clr-namespace:Pantas.DeltaDraw.Shaders.Grayscale;assembly=GrayscaleShaderEffect"
+        Title="DeltaDraw" Height="434" Width="684" Icon="/DeltaDraw;component/AppIcon.ico">
+	<Window.CommandBindings>
+		<CommandBinding Command="New" CanExecute="WindowCommand_CanExecute" Executed="WindowCommand_Executed"/>
+		<CommandBinding Command="Open" CanExecute="WindowCommand_CanExecute" Executed="WindowCommand_Executed"/>
+		<CommandBinding Command="Save" CanExecute="WindowCommand_CanExecute" Executed="WindowCommand_Executed"/>
+		<CommandBinding Command="SaveAs" CanExecute="WindowCommand_CanExecute" Executed="WindowCommand_Executed"/>
+		<CommandBinding Command="Close" CanExecute="WindowCommand_CanExecute" Executed="WindowCommand_Executed"/>
+		<CommandBinding Command="{x:Static this:MainWindow.AboutCommand}" CanExecute="WindowCommand_CanExecute" Executed="WindowCommand_Executed"/>
+		<CommandBinding Command="Undo" CanExecute="WindowCommand_CanExecute" Executed="WindowCommand_Executed"/>
+		<CommandBinding Command="Redo" CanExecute="WindowCommand_CanExecute" Executed="WindowCommand_Executed"/>
+	</Window.CommandBindings>
+	<Window.Resources>
+		<BooleanToVisibilityConverter x:Key="resBooleanToVisibilityConverter"/>
+		<gss:DDGrayscaleEffect x:Key="resGrayscaleEffect"/>
+		<DrawingBrush x:Key="resCheckboardBrush" Viewport="0,0,20,20" ViewportUnits="Absolute" TileMode="Tile">
+			<DrawingBrush.Drawing>
+				<GeometryDrawing Brush="Gray">
+					<GeometryDrawing.Geometry>
+						<GeometryGroup>
+							<RectangleGeometry Rect="0,0,10,10"/>
+							<RectangleGeometry Rect="10,10,10,10"/>
+						</GeometryGroup>
+					</GeometryDrawing.Geometry>
+				</GeometryDrawing>
+			</DrawingBrush.Drawing>
+		</DrawingBrush>
+		<SolidColorBrush x:Key="resToolButtonBorderBrush" Color="Blue"/>
+		
+		<LinearGradientBrush x:Key="resGreen1" StartPoint="0,0" EndPoint="1,1">
+			<GradientStop Color="#FF76EB51" Offset="0"/>
+			<GradientStop Color="#FF54AD38" Offset="1"/>
+		</LinearGradientBrush>
+		<LinearGradientBrush x:Key="resGreen2" StartPoint="1,1" EndPoint="0,0">
+			<GradientStop Color="#FF76EB51" Offset="0"/>
+			<GradientStop Color="#FF54AD38" Offset="1"/>
+		</LinearGradientBrush>
+		<LinearGradientBrush x:Key="resOrange1" StartPoint="0,0" EndPoint="1,1">
+			<GradientStop Color="#FFFCEF4D" Offset="0"/>
+			<GradientStop Color="#FFFFB50A" Offset="1"/>
+		</LinearGradientBrush>
+		<LinearGradientBrush x:Key="resOrange2" StartPoint="1,1" EndPoint="0,0">
+			<GradientStop Color="#FFFCEF4D" Offset="0"/>
+			<GradientStop Color="#FFFFB50A" Offset="1"/>
+		</LinearGradientBrush>
+		
+		<Style x:Key="resGreenButton" TargetType="{x:Type RadioButton}">
+			<Setter Property="Foreground" Value="{StaticResource resGreen1}"/>
+			<Setter Property="Background" Value="{StaticResource resGreen2}"/>
+		</Style>
+		<Style x:Key="resOrangeButton" TargetType="{x:Type RadioButton}">
+			<Setter Property="Foreground" Value="{StaticResource resOrange1}"/>
+			<Setter Property="Background" Value="{StaticResource resOrange2}"/>
+		</Style>
+		
+		<ControlTemplate x:Key="resToolButton" TargetType="{x:Type RadioButton}">
+			<Border x:Name="xamlTBBorder" BorderThickness="2" BorderBrush="Transparent" CornerRadius="6">
+				<Grid>
+					<Rectangle x:Name="xamlTBOuterRect" RadiusX="5" RadiusY="5" Stroke="#40000000"
+							Fill="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Background}"/>
+					<Rectangle x:Name="xamlTBInnerRect" RadiusX="5" RadiusY="5" Margin="3" StrokeThickness="0"
+							Fill="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Foreground}"/>
+					<ContentPresenter x:Name="xamlTBContentPresenter"></ContentPresenter>
+				</Grid>
+			</Border>
+			<ControlTemplate.Triggers>
+				<MultiTrigger>
+					<MultiTrigger.Conditions>
+						<Condition Property="IsEnabled" Value="True"/>
+						<Condition Property="IsMouseOver" Value="True"/>
+					</MultiTrigger.Conditions>
+					<MultiTrigger.Setters>
+						<Setter TargetName="xamlTBOuterRect" Property="Fill"
+								Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Foreground}"/>
+					</MultiTrigger.Setters>
+				</MultiTrigger>
+				<Trigger Property="IsPressed" Value="True">
+					<Setter TargetName="xamlTBInnerRect" Property="Fill"
+							Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Background}"/>
+					<Setter TargetName="xamlTBContentPresenter" Property="Margin" Value="1"/>
+				</Trigger>
+				<Trigger Property="IsChecked" Value="True">
+					<Setter TargetName="xamlTBBorder" Property="BorderBrush" Value="Blue"/>
+				</Trigger>
+				<Trigger Property="IsEnabled" Value="False">
+					<Setter Property="Effect" Value="{StaticResource resGrayscaleEffect}"/>
+				</Trigger>
+			</ControlTemplate.Triggers>
+		</ControlTemplate>
+
+		<Style TargetType="{x:Type core:DDTSFrameHandle}">
+			<Setter Property="Background" Value="Black"/>
+			<Setter Property="BorderBrush" Value="White"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type core:DDTSFrameHandle}">
+						<Grid>
+							<Rectangle Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"
+									Stroke="{TemplateBinding BorderBrush}" StrokeThickness="0.5"
+									Fill="{TemplateBinding Background}"/>
+							<Rectangle x:Name="xamlDTSFBorder1" Margin="-3.5" Stroke="{TemplateBinding BorderBrush}"
+									StrokeThickness="3" Visibility="Collapsed"/>
+							<Rectangle x:Name="xamlDTSFBorder2" Margin="-3" Stroke="{TemplateBinding Background}"
+									StrokeThickness="2" Visibility="Collapsed"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="xamlDTSFBorder1" Property="Visibility" Value="Visible"/>
+								<Setter TargetName="xamlDTSFBorder2" Property="Visibility" Value="Visible"/>
+								<Setter Property="Background" Value="Navy"/>
+							</Trigger>
+							<Trigger Property="IsBeingDragged" Value="True">
+								<Setter Property="Background" Value="Red"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		<Style TargetType="{x:Type core:DDPointHandle}">
+			<Setter Property="Background" Value="Black"/>
+			<Setter Property="BorderBrush" Value="White"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type core:DDPointHandle}">
+						<Grid>
+							<Rectangle Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"
+									Stroke="{TemplateBinding BorderBrush}" StrokeThickness="0.5"
+									Fill="{TemplateBinding Background}"/>
+							<Rectangle x:Name="xamlPHBorder1" Margin="-3.5" Stroke="{TemplateBinding BorderBrush}"
+									StrokeThickness="3" Visibility="Collapsed"/>
+							<Rectangle x:Name="xamlPHBorder2" Margin="-3" Stroke="{TemplateBinding Background}"
+									StrokeThickness="2" Visibility="Collapsed"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="xamlPHBorder1" Property="Visibility" Value="Visible"/>
+								<Setter TargetName="xamlPHBorder2" Property="Visibility" Value="Visible"/>
+								<Setter Property="Background" Value="Navy"/>
+							</Trigger>
+							<Trigger Property="IsBeingDragged" Value="True">
+								<Setter Property="Background" Value="Red"/>
+							</Trigger>							
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		<Style TargetType="{x:Type core:DDControl1Handle}">
+			<Setter Property="Background" Value="Black"/>
+			<Setter Property="BorderBrush" Value="White"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type core:DDControl1Handle}">
+						<Grid>
+							<Ellipse Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"
+									Stroke="{TemplateBinding BorderBrush}" StrokeThickness="0.5"
+									Fill="{TemplateBinding Background}"/>
+							<Ellipse x:Name="xamlPHC1Border1" Margin="-3.5" Stroke="{TemplateBinding BorderBrush}"
+									StrokeThickness="3" Visibility="Collapsed"/>
+							<Ellipse x:Name="xamlPHC1Border2" Margin="-3" Stroke="{TemplateBinding Background}"
+									StrokeThickness="2" Visibility="Collapsed"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="xamlPHC1Border1" Property="Visibility" Value="Visible"/>
+								<Setter TargetName="xamlPHC1Border2" Property="Visibility" Value="Visible"/>
+								<Setter Property="Background" Value="Navy"/>
+							</Trigger>
+							<Trigger Property="IsBeingDragged" Value="True">
+								<Setter Property="Background" Value="Red"/>
+							</Trigger>							
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		<Style TargetType="{x:Type core:DDControl2Handle}">
+			<Setter Property="Background" Value="Black"/>
+			<Setter Property="BorderBrush" Value="White"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type core:DDControl2Handle}">
+						<Grid>
+							<Ellipse Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"
+									Stroke="{TemplateBinding BorderBrush}" StrokeThickness="0.5"
+									Fill="{TemplateBinding Background}"/>
+							<Ellipse x:Name="xamlPHC2Border1" Margin="-3.5" Stroke="{TemplateBinding BorderBrush}"
+									StrokeThickness="3" Visibility="Collapsed"/>
+							<Ellipse x:Name="xamlPHC2Border2" Margin="-3" Stroke="{TemplateBinding Background}"
+									StrokeThickness="2" Visibility="Collapsed"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="xamlPHC2Border1" Property="Visibility" Value="Visible"/>
+								<Setter TargetName="xamlPHC2Border2" Property="Visibility" Value="Visible"/>
+								<Setter Property="Background" Value="Navy"/>
+							</Trigger>
+							<Trigger Property="IsBeingDragged" Value="True">
+								<Setter Property="Background" Value="Red"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<Style TargetType="{x:Type this:DDSelectionRect}">
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type this:DDSelectionRect}">
+						<Rectangle
+							Fill="#325A5AE6"
+                            Stroke="#965A5AE6"
+                            StrokeThickness="2"
+							StrokeDashArray="4,3"
+							StrokeDashCap="Round"
+							StrokeLineJoin="Bevel"
+							Width="{TemplateBinding Width}"
+							Height="{TemplateBinding Height}"/>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		
+		<Style TargetType="{x:Type Expander}">
+			<Style.Triggers>
+				<Trigger Property="IsExpanded" Value="True">
+					<Setter Property="Background" Value="LightGray"/>
+					<Setter Property="HeaderTemplate">
+						<Setter.Value>
+							<DataTemplate>
+								<DataTemplate.Resources>
+									<LinearGradientBrush x:Key="resNormalBorder" StartPoint="0,0.5" EndPoint="1,0.5">
+										<GradientStop Offset="0" Color="Transparent"/>
+										<GradientStop Offset="1" Color="AliceBlue"/>
+									</LinearGradientBrush>
+									<LinearGradientBrush x:Key="resHighlightedBorder" StartPoint="0,0.5" EndPoint="1,0.5">
+										<GradientStop Offset="0" Color="Transparent"/>
+										<GradientStop Offset="0.7" Color="White"/>
+									</LinearGradientBrush>
+								</DataTemplate.Resources>
+								<DataTemplate.Triggers>
+									<Trigger Property="IsMouseOver" Value="True">
+										<Setter TargetName="xamlExpanderBorder1" Property="Border.Background"
+												Value="{StaticResource resHighlightedBorder}"/>
+									</Trigger>
+								</DataTemplate.Triggers>
+								<Border Name="xamlExpanderBorder1"  Width="{Binding RelativeSource={RelativeSource Mode=FindAncestor,
+										AncestorType={x:Type Expander}}, Path=ActualWidth}"
+										Background="{StaticResource resNormalBorder}">
+									<TextBlock FontWeight="Bold" Text="{Binding}" Margin="5,0,0,0" FontFamily="Verdana" />
+								</Border>
+							</DataTemplate>
+						</Setter.Value>
+					</Setter>
+				</Trigger>
+				<MultiTrigger>
+					<MultiTrigger.Conditions>
+						<Condition Property="IsExpanded" Value="False"/>
+						<Condition Property="IsMouseOver" Value="True"/>
+					</MultiTrigger.Conditions>
+					<MultiTrigger.Setters>
+						<Setter Property="Background" Value="White"/>
+					</MultiTrigger.Setters>
+				</MultiTrigger>
+			</Style.Triggers>
+			<Setter Property="Background" Value="AliceBlue"/>
+			<Setter Property="BorderBrush" Value="Gray"/>
+			<Setter Property="BorderThickness" Value="2"/>
+			<Setter Property="HeaderTemplate">
+				<Setter.Value>
+					<DataTemplate>
+						<Border Width="{Binding RelativeSource={RelativeSource Mode=FindAncestor,
+								AncestorType={x:Type Expander}}, Path=ActualWidth}">
+							<TextBlock FontWeight="Bold" Text="{Binding}" Margin="5,0,0,0" FontFamily="Verdana" />
+						</Border>
+					</DataTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+	</Window.Resources>
+    
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="250" />
+			<ColumnDefinition Width="3" />
+			<ColumnDefinition Width="*" />
+		</Grid.ColumnDefinitions>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
+		<Menu Grid.ColumnSpan="3">
+			<Menu.Items>
+				<MenuItem Header="_File">
+					<MenuItem Command="New"></MenuItem>
+					<Separator></Separator>
+					<MenuItem Command="Open"></MenuItem>
+					<MenuItem Command="Save"></MenuItem>
+					<MenuItem Command="SaveAs"></MenuItem>
+					<Separator></Separator>
+					<MenuItem Command="Close"></MenuItem>
+				</MenuItem>
+				<MenuItem Header="_Edit">
+					<MenuItem Command="Undo"></MenuItem>
+					<MenuItem Command="Redo"></MenuItem>
+					<Separator></Separator>
+					<MenuItem Command="Cut"></MenuItem>
+					<MenuItem Command="Copy"></MenuItem>
+					<MenuItem Command="Paste"></MenuItem>
+					<MenuItem Command="Delete"></MenuItem>
+					<Separator></Separator>
+					<MenuItem Command="{x:Static this:MainWindow.CopyAsXamlCommand}"></MenuItem>
+				</MenuItem>
+				<MenuItem Header="_Help">
+					<MenuItem Command="{x:Static this:MainWindow.AboutCommand}"></MenuItem>
+				</MenuItem>
+			</Menu.Items>
+		</Menu>
+		<Border Grid.Row="1" BorderThickness="1" Padding="2" Background="DarkGray">
+			<Grid Background="LightGray">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+				
+				<WrapPanel Name="xamlButtonPanel" Margin="2, 5, 2, 0">
+					<RadioButton Name="xamlPickButton" Template="{StaticResource resToolButton}"
+							Style="{StaticResource resGreenButton}" Width="40" Height="40"
+							Click="xamlToolButton_Click" GroupName="ToolButtons" Tag="{x:Type this:DDPickTool}"
+							ToolTip="Pick tool, used for a wide range of manipulations on all objects">
+						<Viewbox Margin="3">
+							<Canvas Width="34.2342" Height="36.5102">
+								<Path Width="32.7324" Height="35.0085" Canvas.Left="0.750881" Canvas.Top="0.750881" Stretch="Fill" StrokeThickness="0.500587" StrokeMiterLimit="2.75" Stroke="#FF221F20" Fill="#F4000000" Data="M 33.233,26.3608L 22.0143,35.509L 8.85722,19.3711L 2.46959,24.5693L 1.00118,22.7778L 3.21849,1.00117L 24.9951,3.21849L 26.4636,5.00996L 20.0759,10.2229L 33.233,26.3608 Z M 5.37707,3.64433L 4.01144,17.2125L 7.74122,14.1582L 20.8542,30.2374L 28.3138,24.1582L 15.2008,8.07896L 18.9453,5.02465L 5.37707,3.64433 Z "/>
+								<Path Width="24.8029" Height="27.0937" Canvas.Left="3.76114" Canvas.Top="3.39404" Stretch="Fill" StrokeThickness="0.500587" StrokeMiterLimit="2.75" Stroke="#FF221F20" Fill="#F4FFFF66" Data="M 7.74122,14.1582L 4.01144,17.2125L 5.37707,3.64433L 18.9453,5.02465L 15.2008,8.07896L 28.3138,24.1582L 20.8542,30.2374L 7.74122,14.1582 Z "/>
+							</Canvas>
+						</Viewbox>
+					</RadioButton>
+					<RadioButton Name="xamlEditButton" Template="{StaticResource resToolButton}"
+							Style="{StaticResource resGreenButton}" Width="40" Height="40"
+							Click="xamlToolButton_Click" GroupName="ToolButtons" Tag="{x:Type this:DDEditTool}"
+							ToolTip="Edit tool, used for modifying node-based objects">
+						<Viewbox Margin="3">
+							<Canvas Width="40.0091" Height="40.0091">
+								<Path Width="12.9714" Height="12.9714" Canvas.Left="2.73683" Canvas.Top="3.20132" Stretch="Fill" StrokeThickness="2.14899" StrokeMiterLimit="2.75" Stroke="#FF000000" Fill="#F9FF0000" Data="M 9.23012,4.27581C 12.2135,4.27581 14.6337,6.71123 14.6337,9.6946C 14.6337,12.678 12.2135,15.0982 9.23012,15.0982C 6.24674,15.0982 3.81133,12.678 3.81133,9.6946C 3.81133,6.71123 6.24674,4.27581 9.23012,4.27581 Z "/>
+								<Path Width="28.8227" Height="28.1377" Canvas.Left="9.01266" Canvas.Top="9.47715" Stretch="Fill" StrokeThickness="0.434916" StrokeMiterLimit="2.75" Stroke="#FF221F20" Fill="#F9000000" Data="M 37.6179,22.6327L 27.6479,27.3057L 24.8472,37.3974L 9.23012,9.6946L 37.6179,22.6327 Z "/>
+							</Canvas>
+						</Viewbox>
+					</RadioButton>
+					<RadioButton Name="xamlRectangleButton" Template="{StaticResource resToolButton}"
+							Style="{StaticResource resOrangeButton}" Width="40" Height="40"
+							Click="xamlToolButton_Click" GroupName="ToolButtons" Tag="{x:Type this:DDRectangleTool}"
+							ToolTip="Rectangle tool, used for drawing rectangles">
+						<Viewbox Margin="3">
+							<Canvas Width="40.0091" Height="40.0091">
+								<Rectangle Width="34.3875" Height="31.4457" Canvas.Left="2.87277" Canvas.Top="4.25692" Stretch="Fill" StrokeThickness="1.60036" StrokeMiterLimit="2.75" Stroke="#FF000000" Fill="#FFB953FD"/>
+								<Rectangle Width="5.36172" Height="5.36172" Canvas.Left="1" Canvas.Top="2.38415" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.36172" Height="5.36172" Canvas.Left="17.3857" Canvas.Top="2.38415" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.34591" Height="5.36172" Canvas.Left="33.7871" Canvas.Top="2.38415" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.36172" Height="5.36172" Canvas.Left="1" Canvas.Top="17.2989" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.34591" Height="5.36172" Canvas.Left="33.7871" Canvas.Top="17.2989" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.36172" Height="5.3459" Canvas.Left="1" Canvas.Top="32.2295" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.36172" Height="5.3459" Canvas.Left="17.3857" Canvas.Top="32.2295" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.34591" Height="5.3459" Canvas.Left="33.7871" Canvas.Top="32.2295" Stretch="Fill" Fill="#F4000000"/>
+							</Canvas>
+						</Viewbox>
+					</RadioButton>
+					<RadioButton Name="xamlEllipseButton" Template="{StaticResource resToolButton}"
+							Style="{StaticResource resOrangeButton}" Width="40" Height="40"
+							Click="xamlToolButton_Click" GroupName="ToolButtons" Tag="{x:Type this:DDEllipseTool}"
+							ToolTip="Ellipse tool, used for drawing ellipses">
+						<Viewbox Margin="3">
+							<Canvas Width="40.0091" Height="40.0091">
+								<Path Width="34.2056" Height="31.2921" Canvas.Left="2.98039" Canvas.Top="4.38039" Stretch="Fill" StrokeThickness="1.73373" StrokeMiterLimit="2.75" Stroke="#FF000000" Fill="#FF3BE7E7" Data="M 20.091,34.8056C 29.051,34.8056 36.3192,28.1953 36.3192,20.0343C 36.3192,11.8732 29.051,5.24725 20.091,5.24725C 11.1154,5.24725 3.84725,11.8732 3.84725,20.0343C 3.84725,28.1953 11.1154,34.8056 20.091,34.8056 Z "/>
+								<Rectangle Width="5.31017" Height="5.31017" Canvas.Left="1.2" Canvas.Top="2.6" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.31016" Height="5.31017" Canvas.Left="17.4281" Canvas.Top="2.6" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.29451" Height="5.31017" Canvas.Left="33.6719" Canvas.Top="2.6" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.31017" Height="5.31017" Canvas.Left="1.2" Canvas.Top="17.3713" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.29451" Height="5.31017" Canvas.Left="33.6719" Canvas.Top="17.3713" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.31017" Height="5.29451" Canvas.Left="1.2" Canvas.Top="32.1584" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.31016" Height="5.29451" Canvas.Left="17.4281" Canvas.Top="32.1584" Stretch="Fill" Fill="#F4000000"/>
+								<Rectangle Width="5.29451" Height="5.29451" Canvas.Left="33.6719" Canvas.Top="32.1584" Stretch="Fill" Fill="#F4000000"/>
+							</Canvas>
+						</Viewbox>
+					</RadioButton>
+					<RadioButton Name="xamlPenButton" Template="{StaticResource resToolButton}"
+								 Style="{StaticResource resOrangeButton}" Width="40" Height="40"
+								 Click="xamlToolButton_Click" GroupName="ToolButtons" Tag="{x:Type this:DDPenTool}"
+								 ToolTip="Pen tool, used for drawing node-based objects">
+						<Viewbox Margin="3">
+							<Canvas Width="40.0091" Height="40.0091">
+								<Path Width="13.7006" Height="39.0745" Canvas.Left="-0.221146" Canvas.Top="0.523751" Stretch="Fill" StrokeThickness="2.84228" StrokeMiterLimit="2.75" Stroke="#FF1E7900" Data="M 12.0583,1.94489C 4.59543,7.06021 2.80929,11.9394 7.99085,19.7777C 12.9248,27.2067 13.4377,34.3996 1.2,38.1771"/>
+								<Path Width="26.0925" Height="30.8743" Canvas.Left="12.3938" Canvas.Top="8.39557" Stretch="Fill" Fill="#FF44E900" Data="M 22.5743,8.39557L 38.4863,32.7306C 36.5705,37.1163 33.1031,39.3012 28.0683,39.2695L 12.3938,15.0137C 22.1785,8.52223 15.6712,12.8921 22.5743,8.39557 Z "/>
+								<Path Width="29.4975" Height="39.6308" Canvas.Left="9.36925" Canvas.Top="0.0195383" Stretch="Fill" StrokeThickness="0.760927" StrokeMiterLimit="2.75" Stroke="#FF000000" Fill="#F4000000" Data="M 9.74971,1.60329L 11.6655,0.400002L 21.0385,9.39303L 22.5743,8.39557L 38.4863,32.7306C 36.5705,37.1163 33.1031,39.3012 28.0683,39.2695L 12.378,15.0137L 13.9296,13.9845L 9.74971,1.60329 Z M 16.4628,18.8136L 28.2424,36.7996C 31.8365,36.4671 34.4647,34.773 36.0955,31.749L 24.3159,13.7946C 22.5743,16.787 19.946,18.4652 16.4628,18.8136 Z "/>
+								<Rectangle Width="5.57243" Height="5.83466" Canvas.Left="1.45772e-006" Canvas.Top="34.1745" Stretch="Fill" Fill="#FF000000"/>
+								<Rectangle Width="5.57243" Height="5.83466" Canvas.Left="7.37185" Canvas.Top="20.4105" Stretch="Fill" Fill="#FF000000"/>
+							</Canvas>
+						</Viewbox>
+					</RadioButton>
+				</WrapPanel>
+
+				<ScrollViewer Grid.Row="1" VerticalContentAlignment="Top" HorizontalContentAlignment="Stretch"
+						VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+
+					<StackPanel Orientation="Vertical">
+						<Expander Name="xamlExpanderPickTool" Margin="2,5,2,0" Header="Pick tool options" IsExpanded="True">
+							<StackPanel Margin="5">
+								<CheckBox Name="xamlAllowPartialSelection" ToolTip="Allow selection rect to detect objects even if it only partially overlaps them">
+									Allow partial selection
+								</CheckBox>
+							</StackPanel>
+						</Expander>
+
+						<Expander Name="xamlExpanderPenTool" Margin="2,5,2,0" IsExpanded="True" Header="Pen tool">
+							<StackPanel Margin="5">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+									<RadioButton Name="xamlExpanderPolygonButton" GroupName="TargetTypeGroup" Width="34" Height="34"
+									Template="{StaticResource resToolButton}" Style="{StaticResource resOrangeButton}"
+									ToolTip="Draw a polygon (closed node-based object">
+										<Viewbox Margin="5">
+											<Polygon Fill="SkyBlue" Stroke="Black" StrokeThickness="2" Width="20" Height="20">
+												<Polygon.Points>
+													<Point X="0" Y="5"/>
+													<Point X="7" Y="2"/>
+													<Point X="20" Y="7"/>
+													<Point X="11" Y="20"/>
+												</Polygon.Points>
+											</Polygon>
+										</Viewbox>
+									</RadioButton>
+									<RadioButton Name="xamlExpanderPolylineButton" Grid.Column="1" IsChecked="False" GroupName="TargetTypeGroup" Width="34" Height="34"
+									Template="{StaticResource resToolButton}" Style="{StaticResource resOrangeButton}"
+									ToolTip="Draw a polyline (open, non-filled node-based object">
+										<Viewbox Margin="5">
+											<Polyline Stroke="Black" StrokeThickness="2" Width="20" Height="20">
+												<Polyline.Points>
+													<Point X="0" Y="5"/>
+													<Point X="7" Y="2"/>
+													<Point X="20" Y="7"/>
+													<Point X="11" Y="20"/>
+												</Polyline.Points>
+											</Polyline>
+										</Viewbox>
+									</RadioButton>
+								</Grid>
+							</StackPanel>
+						</Expander>
+
+						<Expander Name="xamlExpanderRectangle" Margin="2,5,2,0" IsExpanded="True" Header="Rectangle">
+							<StackPanel Margin="5">
+								<Grid Margin="10,5,5,5">
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="*"/>
+									</Grid.ColumnDefinitions>
+									<Grid.RowDefinitions>
+										<RowDefinition Height="Auto"/>
+										<RowDefinition Height="Auto"/>
+									</Grid.RowDefinitions>
+									<Label VerticalAlignment="Center" Margin="3,0,3,0" Content="Radius_X"
+									Target="{Binding ElementName=xamlRectExpanderRadiusX}"/>
+									<nud:DDNumericUpDown Name="xamlRectExpanderRadiusX" Grid.Column="1"
+									ToolTip="Horizontal corner radius (in pixels)"/>
+									<Label VerticalAlignment="Center" Margin="3,0,3,0" Grid.Row="1" Content="Radius_Y"
+									Target="{Binding ElementName=xamlRectExpanderRadiusY}"/>
+									<nud:DDNumericUpDown Name="xamlRectExpanderRadiusY" Grid.Row="1" Grid.Column="1"
+									ToolTip="Vertical corner radius (in pixels)"/>
+								</Grid>
+							</StackPanel>
+						</Expander>
+
+						<Expander Name="xamlExpanderPolygon" Margin="2,5,2,0" IsExpanded="True" Header="Polygon">
+							<StackPanel Margin="5">
+								<Button Click="ConvertButton_Click" ToolTip="Convert selected polygon to polyline">
+									<TextBlock>
+								Convert to <Bold>polyline</Bold>
+									</TextBlock>
+								</Button>
+							</StackPanel>
+						</Expander>
+
+						<Expander Name="xamlExpanderPolyline" Margin="2,5,2,0" IsExpanded="True" Header="Polyline">
+							<StackPanel Margin="5"  ToolTip="Convert selected polyline to polygon">
+								<Button Click="ConvertButton_Click">
+									<TextBlock>
+								Convert to <Bold>polygon</Bold>
+									</TextBlock>
+								</Button>
+							</StackPanel>
+						</Expander>
+
+						<Expander Name="xamlExpanderSelectionLayout" Margin="2,5,2,0" Header="Selection layout" IsExpanded="True">
+							<Grid Margin="5">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="*"/>
+								</Grid.ColumnDefinitions>
+								<Grid.RowDefinitions>
+									<RowDefinition Height="*"/>
+									<RowDefinition Height="*"/>
+								</Grid.RowDefinitions>
+								<Label Target="{Binding ElementName=xamlLayoutX}" HorizontalAlignment="Right"
+								Grid.Row="0"  Grid.Column="0">_X:</Label>
+								<nud:DDNumericUpDown x:Name="xamlLayoutX" Grid.Row="0" Grid.Column="1"
+								ToolTip="X coordinate of current selection"/>
+								<Label Target="{Binding ElementName=xamlLayoutY}" HorizontalAlignment="Right"
+								Grid.Row="0" Grid.Column="2">_Y:</Label>
+								<nud:DDNumericUpDown x:Name="xamlLayoutY"  Grid.Row="0" Grid.Column="3"
+								ToolTip="Y coordinate of current selection"/>
+								<Label Target="{Binding ElementName=xamlLayoutWidth}" HorizontalAlignment="Right"
+								Grid.Row="1"  Grid.Column="0">_W:</Label>
+								<nud:DDNumericUpDown x:Name="xamlLayoutWidth" Grid.Row="1" Grid.Column="1"
+								ToolTip="Width of current selection"/>
+								<Label Target="{Binding ElementName=xamlLayoutHeight}" HorizontalAlignment="Right"
+								Grid.Row="1" Grid.Column="2">_H:</Label>
+								<nud:DDNumericUpDown x:Name="xamlLayoutHeight" Grid.Row="1" Grid.Column="3"
+								ToolTip="Height of current selection"/>
+							</Grid>
+						</Expander>
+
+						<Expander Name="xamlExpanderFill" Margin="2,5,2,0" IsExpanded="True" Header="Fill">
+							<StackPanel Margin="5">
+								<bp:DDBrushPicker x:Name="xamlExpanderFillPicker" ToolTip="Fill of currently active object"/>
+							</StackPanel>
+						</Expander>
+
+						<Expander Name="xamlExpanderStroke" Margin="2,5,2,0" IsExpanded="True" Header="Stroke">
+							<StackPanel Margin="5">
+								<bp:DDBrushPicker x:Name="xamlExpanderStrokePicker" ToolTip="Stroke (line color) of currently active object"/>
+								<Grid Margin="10,5,5,5">
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="*"/>
+									</Grid.ColumnDefinitions>
+									<Label VerticalAlignment="Center" Margin="3,0,3,0" Content="Stroke _thickness:"
+									Target="{Binding ElementName=xamlExpanderStrokeThickness}"/>
+									<nud:DDNumericUpDown Name="xamlExpanderStrokeThickness" Grid.Column="1"
+									ToolTip="Stroke thickness (in pixels) of currently active object"/>
+								</Grid>
+							</StackPanel>
+						</Expander>
+
+						<Expander Name="xamlExpanderCanvasSettings" Margin="2,5,2,0" Header="Canvas settings" IsExpanded="True">
+							<StackPanel Margin="5">
+								<TextBlock FontWeight="Bold" Margin="10,0,5,5">Background color:</TextBlock>
+								<bp:DDBrushPicker x:Name="xamlCanvasBrushPicker" PickedBrush="White"
+								ToolTip="Background brush of main canvas"/>
+								<TextBlock FontWeight="Bold" Margin="10,5,5,5">Size:</TextBlock>
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="*"/>
+									</Grid.ColumnDefinitions>
+									<Label Target="{Binding ElementName=xamlCanvasW}" HorizontalAlignment="Right"
+								Grid.Row="0"  Grid.Column="0">_W:</Label>
+									<nud:DDNumericUpDown x:Name="xamlCanvasW" Grid.Row="0" Grid.Column="1"
+									Value="{Binding ElementName=xamlDrawingCanvasBorder, Path=Width, Mode=TwoWay}"
+									ToolTip="Width (in pixels) of main canvas"/>
+									<Label Target="{Binding ElementName=xamlCanvasH}" HorizontalAlignment="Right"
+								Grid.Row="0" Grid.Column="2">_H:</Label>
+									<nud:DDNumericUpDown x:Name="xamlCanvasH" Grid.Row="0" Grid.Column="3"
+									Value="{Binding ElementName=xamlDrawingCanvasBorder, Path=Height, Mode=TwoWay}"
+									ToolTip="Height (in pixels) of main canvas"/>
+								</Grid>
+							</StackPanel>
+						</Expander>
+					</StackPanel>
+				</ScrollViewer>
+			</Grid>
+		</Border>
+		
+		<GridSplitter Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch" Background="Gray" />
+		
+		<StatusBar Name="xamlStatusBar" Grid.Row="2" Grid.ColumnSpan="3">
+			<StatusBar.Resources>
+				<Style TargetType="{x:Type TextBlock}">
+					<Setter Property="FontFamily" Value="Lucida Console"/>
+					<Setter Property="FontSize" Value="10"/>
+				</Style>
+			</StatusBar.Resources>
+			<StatusBarItem Name="xamlStatusUnsavedItem" Visibility="Collapsed">
+				<Border Padding="2" BorderBrush="DarkGray" BorderThickness="1">
+					<StackPanel Orientation="Horizontal">
+						<TextBlock FontWeight="Bold">Unsaved</TextBlock>
+					</StackPanel>
+				</Border>
+			</StatusBarItem>
+			<StatusBarItem>
+				<Border Padding="2" BorderBrush="DarkGray" BorderThickness="1">
+					<DockPanel Width="120" LastChildFill="False">
+						<TextBlock DockPanel.Dock="Left" Margin="0,0,5,0">Mouse</TextBlock>
+						<TextBlock Name="xamlStatusMouseXY" DockPanel.Dock="Right" FontWeight="Bold"></TextBlock>
+					</DockPanel>
+				</Border>
+			</StatusBarItem>
+			<StatusBarItem>
+				<Border Padding="2" BorderBrush="DarkGray" BorderThickness="1">
+					<DockPanel Width="60" LastChildFill="False">
+						<TextBlock DockPanel.Dock="Left" Margin="0,0,5,0">Zoom</TextBlock>
+						<TextBlock Name="xamlStatusZoom" DockPanel.Dock="Right" FontWeight="Bold"></TextBlock>
+					</DockPanel>
+				</Border>
+			</StatusBarItem>
+			<StatusBarItem HorizontalContentAlignment="Stretch">
+				<Border Padding="2" BorderBrush="DarkGray" BorderThickness="1">
+					<TextBlock Name="xamlStatusInfo"></TextBlock>
+				</Border>
+			</StatusBarItem>
+		</StatusBar>
+
+		<ScrollViewer Name="xamlScrollViewer" Grid.Row="1" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+					  Background="DarkGray" PreviewMouseMove="ScrollViewer_PreviewMouseMove">
+			<ScrollViewer.CommandBindings>
+				<CommandBinding Command="Delete" CanExecute="ScrollViewerCommand_CanExecute" Executed="ScrollViewerCommand_Executed"/>
+				<CommandBinding Command="Cut" CanExecute="ScrollViewerCommand_CanExecute" Executed="ScrollViewerCommand_Executed"/>
+				<CommandBinding Command="Copy" CanExecute="ScrollViewerCommand_CanExecute" Executed="ScrollViewerCommand_Executed"/>
+				<CommandBinding Command="Paste" CanExecute="ScrollViewerCommand_CanExecute" Executed="ScrollViewerCommand_Executed"/>
+				<CommandBinding Command="{x:Static this:MainWindow.CopyAsXamlCommand}" CanExecute="ScrollViewerCommand_CanExecute" Executed="ScrollViewerCommand_Executed"/>
+			</ScrollViewer.CommandBindings>
+			<Viewbox Name="xamlDrawingViewbox" Stretch="UniformToFill" Width="400" Height="300" HorizontalAlignment="Center" VerticalAlignment="Center">
+				<Border BorderBrush="Gray" BorderThickness="5" Width="{Binding ElementName=xamlDrawingArea, Path=Width}"
+						Height="{Binding ElementName=xamlDrawingArea, Path=Height}">					
+					<Grid Name="xamlDrawingArea"  Background="#FFDBDBDB" Width="400" Height="300" Focusable="True" PreviewMouseWheel="xamlDrawingArea_PreviewMouseWheel">
+						<Border Name="xamlDrawingCanvasBorder" Width="200" BorderBrush="Gray" Height="150" BorderThickness="5"
+								SizeChanged="xamlDrawingCanvasBorder_SizeChanged" SnapsToDevicePixels="True">
+							<Border Margin="-10,-10,0,0" Background="White" SnapsToDevicePixels="True">
+								<Border Background="{StaticResource resCheckboardBrush}" SnapsToDevicePixels="True">
+									<Border Name="xamlDrawingCanvasBackground" Background="{Binding ElementName=xamlCanvasBrushPicker, Path=PickedBrush}"
+											BorderBrush="Gray" BorderThickness="2" SnapsToDevicePixels="True"/>
+								</Border>
+							</Border>
+						</Border>
+						<core:DDCanvas Name="xamlDrawingCanvas" Margin="-10,-10,0,0" SnapsToDevicePixels="False"
+								Width="{Binding ElementName=xamlDrawingCanvasBorder, Path=Width, Mode=TwoWay}"
+								Height="{Binding ElementName=xamlDrawingCanvasBorder, Path=Height, Mode=TwoWay}"
+								RelevantPropertyChanged="xamlDrawingCanvas_RelevantPropertyChanged">
+						</core:DDCanvas>
+					</Grid>
+				</Border>
+			</Viewbox>
+		</ScrollViewer>
+	</Grid>
+</Window>

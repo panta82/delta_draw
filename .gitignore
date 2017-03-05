@@ -1,0 +1,5 @@
+Solution/*.suo
+Solution/.vs
+Solution/**/bin
+Solution/**/obj
+Solution/**/*.csproj.user

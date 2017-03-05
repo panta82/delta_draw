@@ -1,0 +1,334 @@
+﻿<UserControl x:Class="Pantas.DeltaDraw.BrushPicker.DDBrushPicker"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:this="clr-namespace:Pantas.DeltaDraw.BrushPicker"
+			 xmlns:cp="clr-namespace:Pantas.DeltaDraw.ColorPicker;assembly=ColorPicker"
+			 xmlns:nud="clr-namespace:Pantas.DeltaDraw.NumericUpDown;assembly=NumericUpDown"
+			 mc:Ignorable="d" 
+			 d:DesignHeight="300" d:DesignWidth="300">
+	<UserControl.Resources>
+		<this:DDColorToStringConverter x:Key="resColorToStringConverter"/>
+		<this:DDColorToSolidColorBrushConverter x:Key="resColorToSolidColorBrushConverter"/>
+		<DrawingBrush x:Key="resCheckboardBrush" Viewport="0,0,8,8" ViewportUnits="Absolute" TileMode="Tile">
+			<DrawingBrush.Drawing>
+				<GeometryDrawing Brush="Black">
+					<GeometryDrawing.Geometry>
+						<GeometryGroup>
+							<RectangleGeometry Rect="0,0,2,2"/>
+							<RectangleGeometry Rect="2,2,2,2"/>
+						</GeometryGroup>
+					</GeometryDrawing.Geometry>
+				</GeometryDrawing>
+			</DrawingBrush.Drawing>
+		</DrawingBrush>
+		<Style x:Key="resColorComboStyle" TargetType="{x:Type ComboBox}">
+			<Setter Property="IsSynchronizedWithCurrentItem" Value="True"/>
+			<Setter Property="IsEditable" Value="True"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="ItemTemplate">
+				<Setter.Value>
+					<DataTemplate>
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="*"/>
+							</Grid.ColumnDefinitions>
+							<Rectangle Stroke="Black" Margin="2" StrokeThickness="1" Width="40" RadiusX="1" RadiusY="1">
+								<Rectangle.Fill>
+									<SolidColorBrush Color="{Binding Path=Color}"/>
+								</Rectangle.Fill>
+							</Rectangle>
+							<TextBlock Margin="2" Grid.Column="1" Text="{Binding Path=Name}"/>
+						</Grid>
+					</DataTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		<DataTemplate x:Key="resNormalGradientStopItem">
+			<Border IsHitTestVisible="False" Margin="-2,-1,0,0" Background="LightGray" BorderBrush="DarkGray" BorderThickness="1">
+				<Grid IsHitTestVisible="False">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+					<Rectangle Margin="5,2,2,2" Width="30" Stroke="Black" StrokeThickness="1">
+						<Rectangle.Fill>
+							<SolidColorBrush Color="{Binding Path=Color}"/>
+						</Rectangle.Fill>
+					</Rectangle>
+					<TextBlock Grid.Column="1" VerticalAlignment="Center" FontFamily="Lucida Console" Margin="2,2,2,2"
+												Text="{Binding Path=Color, Converter={StaticResource resColorToStringConverter}}"/>
+					<StackPanel Grid.Column="2" Margin="2,2,5,2" Orientation="Horizontal">
+						<TextBlock VerticalAlignment="Center" Margin="0,0,4,0" Text="Offset"></TextBlock>
+						<TextBlock VerticalAlignment="Center" Grid.Column="1" FontWeight="Bold" Text="{Binding Path=Offset}"/>
+					</StackPanel>
+				</Grid>
+			</Border>
+		</DataTemplate>
+		<DataTemplate x:Key="resSelectedGradientStopItem">
+			<Border Height="150" Margin="-2,0,0,0" Background="White"
+					PreviewMouseDown="ClickThroughGuardedElement_PreviewMouseDown"
+					Loaded="ClickThroughGuardedElement_Loaded"
+					PreviewMouseMove="ClickThroughGuardedElement_PreviewMouseMove">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+					<ComboBox x:Name="xamlSolidColorCombo" Margin="10,10,1,0" FontFamily="Lucida Console"
+							Style="{StaticResource resColorComboStyle}"
+							ItemsSource="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1}, Path=DefaultColors}"
+							Text="{Binding ElementName=xamlLinearGradientPicker, Path=PickedColor, Mode=TwoWay,
+								Converter={StaticResource resColorToStringConverter}}">
+					</ComboBox>
+					<nud:DDNumericUpDown Grid.Column="1" Margin="1,10,1,0" Width="60" Value="{Binding Mode=TwoWay, Path=Offset}"/>
+					<Button Grid.Column="2" Margin="1,10,10,0" Tag="{Binding}" Click="RemoveStopButton_Click">
+						<Viewbox>
+							<Grid Margin="2">
+								<Line X1="0" Y1="0" X2="10" Y2="10" Stroke="Red" StrokeThickness="2"
+										StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+								<Line X1="10" Y1="0" X2="0" Y2="10" Stroke="Red" StrokeThickness="2"
+										StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+							</Grid>
+						</Viewbox>
+					</Button>
+					<cp:DDColorPicker Name="xamlLinearGradientPicker" Grid.Row="1" Grid.ColumnSpan="3"
+												PickedColor="{Binding Path=Color, Mode=TwoWay}"/>
+				</Grid>
+			</Border>
+		</DataTemplate>
+		<Style x:Key="resGradientStopContainerStyle" TargetType="{x:Type ListBoxItem}">
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="ContentTemplate" Value="{StaticResource resNormalGradientStopItem}" />
+			<Style.Triggers>
+				<Trigger Property="IsSelected" Value="True">
+					<Setter Property="ContentTemplate" Value="{StaticResource resSelectedGradientStopItem}" />
+				</Trigger>
+			</Style.Triggers>
+		</Style>
+	</UserControl.Resources>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+		<TabControl Name="xamlTabControl" Grid.Row="1" Padding="0" SelectionChanged="xamlTabControl_SelectionChanged">
+			
+			<!-- Null brush -->
+			
+			<TabItem Padding="2" Margin="0">
+				<TabItem.Header>
+					<Viewbox Width="15" Height="15" Margin="2,2,2,0">
+						<Canvas Width="15" Height="15">
+							<Line Stroke="Red" X1="0" Y1="0" X2="15" Y2="15" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeThickness="2" />
+							<Line Stroke="Red" X1="15" Y1="0" X2="0" Y2="15" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeThickness="2" />
+						</Canvas>
+					</Viewbox>
+				</TabItem.Header>
+				<TextBlock Margin="10" FontFamily="Courier New" VerticalAlignment="Top">
+					<Bold>null</Bold> brush
+				</TextBlock>
+			</TabItem>
+
+			<!-- SolidColor brush -->
+
+			<TabItem Padding="2" Margin="0">
+				<TabItem.Header>
+					<Border Width="15" Height="15" Margin="2,2,2,0" Background="{StaticResource resCheckboardBrush}">
+						<Rectangle Stroke="Black" StrokeThickness="1" Fill="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1}, Path=SolidColorBrush}"/>
+					</Border>
+				</TabItem.Header>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="*" />
+					</Grid.RowDefinitions>
+					<ComboBox x:Name="xamlSolidColorCombo" Grid.Row="0" Margin="10,10,10,0" FontFamily="Lucida Console"
+							Style="{StaticResource resColorComboStyle}"
+							Text="{Binding ElementName=xamlSolidColorPicker, Path=PickedColor, Mode=TwoWay,
+								Converter={StaticResource resColorToStringConverter}}">
+					</ComboBox>
+					<cp:DDColorPicker x:Name="xamlSolidColorPicker" Grid.Row="1"
+							PickedColor="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1}, Path=SolidColorBrush.Color, Mode=TwoWay}" Height="150" VerticalAlignment="Top" />
+				</Grid>
+			</TabItem>
+
+			<!-- LinearGradient brush -->
+
+			<TabItem Padding="2" Margin="0">
+				<TabItem.Header>
+					<Border Width="15" Height="15" Margin="2,2,2,0" Background="{StaticResource resCheckboardBrush}">
+						<Rectangle Stroke="Black" StrokeThickness="1" Fill="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1}, Path=LinearGradientBrush}"/>
+					</Border>
+				</TabItem.Header>
+				<Grid Margin="10">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					<Grid.Resources>
+						<Style TargetType="{x:Type nud:DDNumericUpDown}">
+							<Setter Property="FontSize" Value="10"/>
+							<Setter Property="Delta" Value="0.1"/>
+							<Setter Property="CtrlMultiplier" Value="0.1"/>
+						</Style>
+						<Style TargetType="{x:Type TextBlock}">
+							<Setter Property="FontSize" Value="9"/>
+						</Style>
+					</Grid.Resources>
+					
+					<TextBlock Margin="0,0,2,2" Text="Start X:" VerticalAlignment="Center"/>
+					<nud:DDNumericUpDown Name="xamlLinearStartX" Margin="2,0,2,2" Grid.Column="1"
+							Value="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1},
+								Path=LinearStart.X, Mode=TwoWay}"/>									 
+					<TextBlock Margin="2,2,2,2" Text="Y:" Grid.Column="2" VerticalAlignment="Center"/>
+					<nud:DDNumericUpDown Name="xamlLinearStartY" Margin="2,0,2,2" Grid.Column="3"
+							Value="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1},
+								Path=LinearStart.Y, Mode=TwoWay}"/>
+
+					<TextBlock Margin="0,0,2,2" Text="End X:" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+					<nud:DDNumericUpDown Name="xamlLinearEndX" Margin="2,0,2,2" Grid.Row="1" Grid.Column="1"
+							Value="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1},
+								Path=LinearEnd.X, Mode=TwoWay}"/>
+					<TextBlock Margin="2,2,2,2" Text="Y:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center"/>
+					<nud:DDNumericUpDown Name="xamlLinearEndY" Margin="2,0,2,2" Grid.Row="1" Grid.Column="3"
+							Value="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1},
+								Path=LinearEnd.Y, Mode=TwoWay}"/>
+					
+					<Button Margin="2,0,0,2" Grid.Column="4" Grid.RowSpan="2" Click="AddStopButton_Click">
+						<Viewbox>
+							<Grid Margin="2">
+								<Line X1="5" Y1="0" X2="5" Y2="10" Stroke="Green" StrokeThickness="2"
+										StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+								<Line X1="0" Y1="5" X2="10" Y2="5" Stroke="Green" StrokeThickness="2"
+										StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+							</Grid>
+						</Viewbox>
+					</Button>
+
+					<ListBox Name="xamlLinearGradientStops" Grid.ColumnSpan="5" Grid.Row="2"
+							ItemsSource="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1}, Path=LinearGradientBrush.GradientStops}"
+							 ItemContainerStyle="{StaticResource resGradientStopContainerStyle}"
+							ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+							ScrollViewer.VerticalScrollBarVisibility="Disabled"
+							ScrollViewer.CanContentScroll="False">
+					</ListBox>
+				</Grid>
+			</TabItem>
+
+			<!-- RadialGradient brush -->
+
+			<TabItem Padding="2" Margin="0">
+				<TabItem.Header>
+					<Grid Width="15" Height="15" Margin="2,2,2,0">
+						<Ellipse Fill="{StaticResource resCheckboardBrush}"/>
+						<Ellipse Stroke="Black" StrokeThickness="1" Fill="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1}, Path=RadialGradientBrush}"/>
+					</Grid>
+				</TabItem.Header>
+				<Grid Margin="10">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					<Grid.Resources>
+						<Style TargetType="{x:Type nud:DDNumericUpDown}">
+							<Setter Property="FontSize" Value="10"/>
+							<Setter Property="Delta" Value="0.1"/>
+							<Setter Property="CtrlMultiplier" Value="0.1"/>
+						</Style>
+						<Style TargetType="{x:Type TextBlock}">
+							<Setter Property="FontSize" Value="9"/>
+						</Style>
+					</Grid.Resources>
+
+					<TextBlock Margin="0,0,2,2" Text="Origin X:" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+					<nud:DDNumericUpDown Name="xamlRadialOriginX" Margin="2,0,2,2" Grid.Column="1"
+							Value="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1},
+								Path=RadialOrigin.X, Mode=TwoWay}"/>
+					<TextBlock Margin="2,2,2,2" Text="Y:" Grid.Column="2" VerticalAlignment="Center"/>
+					<nud:DDNumericUpDown Name="xamlRadialOriginY" Margin="2,0,2,2" Grid.Column="3"
+							Value="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1},
+								Path=RadialOrigin.Y, Mode=TwoWay}"/>
+
+					<TextBlock Margin="0,0,2,2" Text="Center X:" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+					<nud:DDNumericUpDown Name="xamlRadialCenterX" Margin="2,0,2,2" Grid.Row="1" Grid.Column="1"
+							Value="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1},
+								Path=RadialCenter.X, Mode=TwoWay}"/>
+					<TextBlock Margin="2,2,2,2" Text="Y:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center"/>
+					<nud:DDNumericUpDown Name="xamlRadialCenterY" Margin="2,0,2,2" Grid.Row="1" Grid.Column="3"
+							Value="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1},
+								Path=RadialCenter.Y, Mode=TwoWay}"/>
+
+					<TextBlock Margin="0,0,2,2" Text="Radius X:" Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+					<nud:DDNumericUpDown Name="xamlRadialRadiusX" Margin="2,0,2,2" Grid.Row="2" Grid.Column="1"
+							Value="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1},
+								Path=RadialGradientBrush.RadiusX, Mode=TwoWay}"/>
+					<TextBlock Margin="2,2,2,2" Text="Y:" Grid.Row="2" Grid.Column="2" VerticalAlignment="Center"/>
+					<nud:DDNumericUpDown Name="xamlRadialRadiusY" Margin="2,0,2,2" Grid.Row="2" Grid.Column="3"
+							Value="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1},
+								Path=RadialGradientBrush.RadiusY, Mode=TwoWay}"/>
+
+					<Button Margin="2,0,0,2" Grid.Column="4" Grid.RowSpan="3" Click="AddStopButton_Click">
+						<Viewbox>
+							<Grid Margin="2">
+								<Line X1="5" Y1="0" X2="5" Y2="10" Stroke="Green" StrokeThickness="2"
+										StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+								<Line X1="0" Y1="5" X2="10" Y2="5" Stroke="Green" StrokeThickness="2"
+										StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+							</Grid>
+						</Viewbox>
+					</Button>
+
+					<ListBox Name="xamlRadialGradientStops" Grid.ColumnSpan="5" Grid.Row="3"
+							ItemsSource="{Binding RelativeSource={RelativeSource FindAncestor,
+								AncestorType=this:DDBrushPicker, AncestorLevel=1}, Path=RadialGradientBrush.GradientStops}"
+							 ItemContainerStyle="{StaticResource resGradientStopContainerStyle}"
+							ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+							ScrollViewer.VerticalScrollBarVisibility="Disabled"
+							ScrollViewer.CanContentScroll="False">
+					</ListBox>
+				</Grid>
+			</TabItem>
+		</TabControl>
+	</Grid>
+</UserControl>
